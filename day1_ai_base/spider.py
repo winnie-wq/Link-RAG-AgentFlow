@@ -1,5 +1,5 @@
 #资讯爬虫独立文件 → 爬虫逻辑单独拆分，和接口解耦
-import requests#用来模拟浏览器发送网络请求，获取网页 HTML 源码
+import requests#用来模拟浏览器发送网络请求，获取网页 HTML 源码,同步
 from bs4 import BeautifulSoup#网页解析工具，可以从一大段网页文本里提取标题、链接等内容
 import time#提供延时休眠功能
 import random
@@ -26,6 +26,7 @@ PROXIES = {
 
 def get_news():
     # Session 自动保持Cookie、会话保持
+    #什么是cookie：在你电脑上的小型文本数据，网站用来「认出你」
     session = requests.Session()
     url = "https://news.baidu.com/"
     news_list = []
