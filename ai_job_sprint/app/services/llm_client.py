@@ -20,14 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 class LLMClient:
-    
 
     def __init__(self):
 
         if not ARK_API_KEY:
-            raise ValueError(
-                "没有读取到 ARK_API_KEY"
-            )
+            raise ValueError("没有读取到 ARK_API_KEY")
 
         self.client = Ark(
             base_url="https://ark.cn-beijing.volces.com/api/v3",
@@ -53,7 +50,7 @@ class LLMClient:
                         answer += content.text
 
         return answer, response
-    
+
     async def chat(self, message: str):
 
         last_error = None
@@ -106,7 +103,7 @@ class LLMClient:
 
                 if attempt < LLM_MAX_RETRIES - 1:
 
-                    delay = 2 ** attempt
+                    delay = 2**attempt
 
                     await asyncio.sleep(delay)
 
@@ -148,9 +145,7 @@ class LLMClient:
                 raw_answer,
             )
 
-            raise ValueError(
-                "模型返回的不是合法 JSON"
-            ) from exc
+            raise ValueError("模型返回的不是合法 JSON") from exc
 
         try:
 
@@ -163,9 +158,7 @@ class LLMClient:
                 exc,
             )
 
-            raise ValueError(
-                "模型返回 JSON，但结构不符合要求"
-            ) from exc
+            raise ValueError("模型返回 JSON，但结构不符合要求") from exc
 
     def _usage_to_dict(self, usage):
 
@@ -206,9 +199,7 @@ class LLMClient:
 
             elif event.type == "response.completed":
 
-                usage = self._usage_to_dict(
-                    event.response.usage
-                )
+                usage = self._usage_to_dict(event.response.usage)
 
                 logger.info(
                     "Streaming completed usage=%s",
@@ -248,9 +239,7 @@ class LLMClient:
 
         while True:
 
-            item = await asyncio.to_thread(
-                event_queue.get
-            )
+            item = await asyncio.to_thread(event_queue.get)
 
             if item is END:
                 break
