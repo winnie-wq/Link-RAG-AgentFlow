@@ -13,6 +13,9 @@ from app.api.rag import (
 from app.api.rag_optimized import (
     router as rag_optimized_router,
 )
+from app.api.ingest import (
+    router as ingest_router,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,6 +35,7 @@ app.include_router(agent_router)
 app.include_router(graph_agent_router)
 app.include_router(rag_router)
 app.include_router(rag_optimized_router)
+app.include_router(ingest_router)
 
 
 @app.get("/health", tags=["System"])

@@ -14,15 +14,17 @@ from app.services.rag_optimized_service import (
     OptimizedRAGService,
 )
 
+
+from app.core.runtime import (
+    rag_service,
+)
+
 logger = logging.getLogger(__name__)
 
 
 router = APIRouter(
     tags=["Optimized RAG"],
 )
-
-
-rag = OptimizedRAGService()
 
 
 @router.post(
@@ -32,7 +34,7 @@ async def index_documents():
 
     try:
 
-        return rag.index_text_document(
+        return rag_service.index_text_document(
             file_path="data/company.md",
             chunk_size=100,
             overlap=20,
@@ -58,14 +60,14 @@ async def ask(
 
     try:
 
-        if not rag.is_ready():
+        if not rag_service.is_ready():
 
             raise HTTPException(
                 status_code=400,
                 detail=("RAG 索引尚未建立，" "请先调用 " "POST /rag-optimized/index"),
             )
 
-        return await rag.answer(
+        return await rag_service.answer(
             question=request.question,
             mode=request.mode,
             top_k=request.top_k,
