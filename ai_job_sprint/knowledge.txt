@@ -1,0 +1,8 @@
+RAG 是 Retrieval-Augmented Generation，即检索增强生成。
+RAG 通过先检索外部资料，再让大模型根据检索到的资料生成答案。
+
+Hybrid Search 是混合检索。
+它结合向量检索和 BM25 等关键词检索，从而提高召回效果。
+
+MCP 是 Model Context Protocol，即模型上下文协议。
+它用于让 AI 模型以统一方式连接外部工具和数据源。
