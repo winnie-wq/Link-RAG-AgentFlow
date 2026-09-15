@@ -1,13 +1,14 @@
 import asyncio
-import logging
-import time
 import json
+import logging
 import queue
 import threading
+import time
+
 from pydantic import ValidationError
+from volcenginesdkarkruntime import Ark
 
 from app.schemas.chat import NewsInfo
-from volcenginesdkarkruntime import Ark
 
 from app.core.config import (
     ARK_API_KEY,
@@ -31,10 +32,17 @@ class LLMClient:
             api_key=ARK_API_KEY,
         )
 
+        # 保存模型名称
+        self.model = ARK_MODEL
+
+    # =====================================================
+    # 普通同步调用
+    # =====================================================
+
     def _chat_sync(self, message: str):
 
         response = self.client.responses.create(
-            model=ARK_MODEL,
+            model=self.model,
             input=message,
         )
 
@@ -51,6 +59,10 @@ class LLMClient:
 
         return answer, response
 
+    # =====================================================
+    # 普通异步调用
+    # =====================================================
+
     async def chat(self, message: str):
 
         last_error = None
@@ -63,7 +75,7 @@ class LLMClient:
 
                 logger.info(
                     "LLM request started model=%s attempt=%s",
-                    ARK_MODEL,
+                    self.model,
                     attempt + 1,
                 )
 
@@ -78,11 +90,15 @@ class LLMClient:
                 latency = time.perf_counter() - start
 
                 usage = getattr(response, "usage", None)
-                logger.info("Token usage=%s", usage)
+
+                logger.info(
+                    "Token usage=%s",
+                    usage,
+                )
 
                 logger.info(
                     "LLM request success model=%s latency=%.2fs",
-                    ARK_MODEL,
+                    self.model,
                     latency,
                 )
 
@@ -109,6 +125,10 @@ class LLMClient:
 
         raise last_error
 
+    # =====================================================
+    # 结构化信息抽取
+    # =====================================================
+
     async def extract_news(
         self,
         text: str,
@@ -117,20 +137,20 @@ class LLMClient:
         schema = NewsInfo.model_json_schema()
 
         prompt = f"""
-    你是一个新闻信息抽取助手。
+你是一个新闻信息抽取助手。
 
-    请从下面文本中提取信息。
+请从下面文本中提取信息。
 
-    必须只返回合法 JSON。
-    不要返回 Markdown。
-    不要添加解释。
+必须只返回合法 JSON。
+不要返回 Markdown。
+不要添加解释。
 
-    JSON Schema：
-    {json.dumps(schema, ensure_ascii=False)}
+JSON Schema：
+{json.dumps(schema, ensure_ascii=False)}
 
-    新闻文本：
-    {text}
-    """
+新闻文本：
+{text}
+"""
 
         raw_answer = await self.chat(prompt)
 
@@ -160,6 +180,10 @@ class LLMClient:
 
             raise ValueError("模型返回 JSON，但结构不符合要求") from exc
 
+    # =====================================================
+    # Token 使用量转换
+    # =====================================================
+
     def _usage_to_dict(self, usage):
 
         if usage is None:
@@ -173,10 +197,14 @@ class LLMClient:
 
         return str(usage)
 
+    # =====================================================
+    # 流式调用
+    # =====================================================
+
     def _stream_chat_sync(self, message: str):
 
         stream = self.client.responses.create(
-            model=ARK_MODEL,
+            model=self.model,
             input=message,
             stream=True,
         )
@@ -222,6 +250,7 @@ class LLMClient:
             try:
 
                 for item in self._stream_chat_sync(message):
+
                     event_queue.put(item)
 
             except Exception as exc:
@@ -248,3 +277,48 @@ class LLMClient:
                 raise item
 
             yield item
+
+    # =====================================================
+    # 多模态：文字 + 图片
+    # =====================================================
+
+    async def multimodal_chat(
+        self,
+        *,
+        text: str,
+        image_url: str,
+    ):
+
+        response = await asyncio.to_thread(
+            self.client.responses.create,
+            model=self.model,
+            input=[
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": text,
+                        },
+                        {
+                            "type": "input_image",
+                            "image_url": image_url,
+                        },
+                    ],
+                }
+            ],
+        )
+
+        for item in response.output:
+
+            if item.type != "message":
+                continue
+
+            for content in item.content:
+
+                if content.type == "output_text":
+
+                    return content.text
+
+        return ""
