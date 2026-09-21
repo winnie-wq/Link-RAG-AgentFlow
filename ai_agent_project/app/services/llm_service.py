@@ -1,0 +1,3 @@
+class LLMClient:
+
+    async def chat(self, message: str): ...
